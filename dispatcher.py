@@ -1,4 +1,4 @@
-import simpy, random
+import random
 from job import Job
 
 class Dispatcher:
