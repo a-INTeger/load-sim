@@ -8,7 +8,9 @@ class Job:
         self.created = self.env.now
         self.processed = None
     
-    def process(self):
+    def process(self, delaysArr):
         self.process = self.env.now
         print(f"Job {self.jobName} processed at {self.process}")
+        delaysArr.append(self.process - self.created)
+
 

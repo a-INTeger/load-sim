@@ -1,19 +1,21 @@
 import simpy
-from job import Job
+import numpy as np
 from server import Server
-
-def jobCreator(env, interval, server):
-    count = 0
-    while 1:
-        count += 1
-        job = Job(env, str(count))
-        server.submitJob(job)
-        yield env.timeout(interval)
+from dispatcher import Dispatcher
+import argparse
 
 
-if __name__ == "__main__":
-    env = simpy.Environment()
-    server = Server(env)
-    env.process(jobCreator(env, 3, server))
+parser = argparse.ArgumentParser(prog="load-sim",
+                                 description="A short simulation for load balancing"
+                                 
+                                 )
 
-    env.run(until=20)
+
+delaysArr = []
+env = simpy.Environment()
+serverArr = [Server(env, str(i), delaysArr) for i in range(10)]
+dispatcher = Dispatcher(env, serverArr)
+env.process(dispatcher.run(1))
+
+env.run(until=500)
+print(np.mean(delaysArr))
