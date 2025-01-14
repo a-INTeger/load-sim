@@ -1,8 +1,11 @@
 import random
+import numpy as np
+import math
 from job import Job
 
 class Dispatcher:
-    def __init__(self, env, serverList):
+    def __init__(self, env, serverList, name):
+        self.name = name
         self.env = env
         self.serverList = serverList
 
@@ -49,10 +52,12 @@ class Dispatcher:
         bestServer.submitJob(job)
                 
     
-    def run(self, interval):
+    def run(self):
         count = 0
         while 1:
             count += 1
             job = Job(self.env, str(count))
+            print(f"job {count} was sent from {self.name}")
             self.dispatchRandom(job)
+            interval = math.floor(np.random.normal(10, 1))
             yield self.env.timeout(interval)

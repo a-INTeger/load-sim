@@ -14,8 +14,9 @@ args = parser.parse_args()
 delaysArr = []
 env = simpy.Environment()
 serverArr = [Server(env, str(i), delaysArr) for i in range(args.servercount)]
-dispatcher = Dispatcher(env, serverArr)
-env.process(dispatcher.run(1))
+dispatcherArr = [Dispatcher(env, serverArr, str(i)) for i in range(10)]
+for dispatch in dispatcherArr:
+    env.process(dispatch.run())
 
 if args.time:
     env.run(until=args.time)
