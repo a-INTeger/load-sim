@@ -14,8 +14,8 @@ parser.add_argument("dispatchercount", help="The number of dispatchers within th
 args = parser.parse_args()
 
 results = {}
-intervals = [i for i in range(10, 75, 5)]
-for op in range(1, 4):
+intervals = [i for i in range(1, 75, 5)]
+for op in range(1, 2):
     avgDelay = []
     for interval in intervals:
         delaysArr = []
@@ -33,7 +33,7 @@ for op in range(1, 4):
         avgDelay.append(np.mean(delaysArr))
     results[dispatcherArr[0].getOperationName()] = avgDelay
 
-x = list(map(lambda x: 1/x, intervals))
+x = list(map(lambda x: args.dispatchercount / (args.servercount * x) , intervals))
 fig, ax = plt.subplots()
 for key in results:
     ax.plot(x, results[key], label=key)
