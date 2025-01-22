@@ -1,13 +1,14 @@
 import random
 import numpy as np
-import math
+from scipy.stats import poisson
 from job import Job
 
 class Dispatcher:
-    def __init__(self, env, serverList, name):
+    def __init__(self, env, serverList, name, op):
         self.name = name
         self.env = env
         self.serverList = serverList
+        self.op = op
 
     def dispatchRandom(self, job):
         chosen = random.choice(self.serverList)
@@ -50,14 +51,27 @@ class Dispatcher:
                 bestServer = server
         
         bestServer.submitJob(job)
+
+    def getOperationName(self):
+        if (self.op == 1):
+            return "Random"
+        elif (self.op == 2):
+            return "JSQ"
+        elif (self.op == 3):
+            return "JIQ"
                 
     
-    def run(self):
+    def run(self, pause):
         count = 0
         while 1:
             count += 1
             job = Job(self.env, str(count))
             print(f"job {count} was sent from {self.name}")
-            self.dispatchRandom(job)
-            interval = math.floor(np.random.normal(10, 1))
+            if (self.op == 1):
+                self.dispatchRandom(job)
+            elif (self.op == 2):
+                self.JSQ(job)
+            elif (self.op == 3):
+                self.JIQ(job)
+            interval = poisson.rvs(pause)
             yield self.env.timeout(interval)
