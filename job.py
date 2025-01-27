@@ -1,10 +1,10 @@
-import simpy, random
+import numpy as np
 
 class Job:
     def __init__(self, env, jobName):
         self.env = env
         self.jobName = jobName
-        self.processTime = 1
+        self.processTime = np.random.exponential(1)
         self.created = self.env.now
         self.processed = None
     

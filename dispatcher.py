@@ -64,6 +64,8 @@ class Dispatcher:
     def run(self, pause):
         count = 0
         while 1:
+            
+            
             count += 1
             job = Job(self.env, str(count))
             print(f"job {count} was sent from {self.name}")
@@ -73,5 +75,6 @@ class Dispatcher:
                 self.JSQ(job)
             elif (self.op == 3):
                 self.JIQ(job)
-            interval = poisson.rvs(pause)
+            # interval = poisson.rvs()
+            interval = np.random.exponential(pause)
             yield self.env.timeout(interval)
