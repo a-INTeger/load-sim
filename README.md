@@ -50,3 +50,6 @@ python csvdataloader.py folder_name
 ```
 
 the graph will be saved within the csvs folder under `CCDF_folder_name.png`
+
+# Extending for new algorithms
+To extend the simulation to include alternate dispatching algorithms, extend the `queueHandler` class to include new methods, 1 for calculating probabilties for a stochastic dispatching algorithm and another public method to pass the server to the `dispatcher` class. Then within the dispatcher class call the aforementioned public method to obtain the server and simply call `server.dispatchJob()`.
