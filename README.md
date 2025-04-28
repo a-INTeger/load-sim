@@ -32,7 +32,7 @@ For an environment that contains 10 servers, 5 dispatchers with c = 1.0 which ru
 
 For running a specific run with a specific value of $\lambda$ with all data being saved to csvs
 ```
-python specifictestenv.py servers dispatchers constant run_name -t TIME
+python testenv.py servers dispatchers constant run_name -t TIME
 ```
 make sure to change the value for $\lambda$ within the python file, the csvs will be saved under `csvs/run_name/`
 
