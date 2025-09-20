@@ -170,6 +170,7 @@ cython_debug/
 *.npy
 csvs/*
 .csv
+results/*
 
 # ignore image
 test-imgs/

@@ -1,4 +1,5 @@
 import simpy, argparse, concurrent.futures
+from json import dump
 from collections import defaultdict
 import numpy as np
 from server import Server
@@ -88,6 +89,9 @@ def main():
             finalResults[runNumber] = results
 
     mergedResults = merge_results(finalResults, np.linspace(0.0, 1.0, num=50)[1:])
+
+    with open(f"results/{args.file}.json", "w") as f:
+        dump(mergedResults, f, indent=4)
 
 if __name__ == "__main__":
     main()
