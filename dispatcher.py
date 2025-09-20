@@ -3,35 +3,64 @@ import numpy as np
 from job import Job
 
 class Dispatcher:
-    def __init__(self, env, queueHandler, name, op):
-        self.name = name
+    def __init__(self, env, queueHandler, opName):
+        self.opName = opName
         self.env = env
         self.queueHandler = queueHandler
-        # define the dispatching algorithm to use
-        self.op = op
+    
+    def dispatch(self, job):
+        raise NotImplementedError("This method should be overridden by subclasses")
+    
+    def getOperationName(self):
+        return self.opName
 
-    def dispatchRandom(self, job):
+    def run(self, pause):
+        while True:
+            job = Job(self.env)
+            self.dispatch(job)
+            interval = np.random.exponential(pause)
+            yield self.env.timeout(interval)
+
+
+class RandomDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler):
+        super().__init__(env, queueHandler, "Random")
+    
+    def dispatch(self, job):
         chosen = random.choice(self.queueHandler.getQueueLengths())
         chosen[0].submitJob(job)
-
-    def JSQ(self, job):
+    
+class JSQDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler):
+        super().__init__(env, queueHandler, "JSQ")
+    
+    def dispatch(self, job):
         bestServer = self.queueHandler.getMinQueueServer()
         bestServer.submitJob(job)
 
-    def JIQ(self, job):
+class JIQDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler):
+        super().__init__(env, queueHandler, "JIQ")
+    
+    def dispatch(self, job):
         bestServer = None
         for (server, length) in self.queueHandler.getQueueLengths():
             if length == 0:
                 bestServer = server
         
         if bestServer is None:
-            self.dispatchRandom(job)
+            chosen = random.choice(self.queueHandler.getQueueLengths())
+            chosen[0].submitJob(job)
         else:
             bestServer.submitJob(job)
 
-    def JSQd(self, d, job):
-        
-        subsetServers = random.sample(self.queueHandler.getQueueLengths(), d)
+class JSQdDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler, d=2):
+        super().__init__(env, queueHandler, f"JSQ({d})")
+        self.d = d
+    
+    def dispatch(self, job):
+        subsetServers = random.sample(self.queueHandler.getQueueLengths(), self.d)
         minQueueLength = float('inf')
         bestServer = None
 
@@ -42,12 +71,21 @@ class Dispatcher:
         
         bestServer.submitJob(job)
 
-    def softminjsq(self, job):
+class SoftminJSQDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler):
+        super().__init__(env, queueHandler, "Softmin-JSQ")
+    
+    def dispatch(self, job):
         chosen = self.queueHandler.softmaxGetServer()
         chosen.submitJob(job)
+
+class SoftminJSQdDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler, d=2):
+        super().__init__(env, queueHandler, f"Softmin-JSQ({d})")
+        self.d = d
     
-    def softminjsqd(self, d, job):
-        subsetServers = random.sample(self.queueHandler.getQueueLengths(), d)
+    def dispatch(self, job):
+        subsetServers = random.sample(self.queueHandler.getQueueLengths(), self.d)
         serverList = list(map(lambda x: x[0], subsetServers))
         total = np.sum(np.exp(list(map(lambda x: -x[1] / self.queueHandler.getUpdateDelay(), subsetServers))))
         probs = list()
@@ -57,55 +95,13 @@ class Dispatcher:
 
         chosen = np.random.choice(serverList, p=probs)
         chosen.submitJob(job)
+
+
+class TWFDispatcher(Dispatcher):
+    def __init__(self, env, queueHandler):
+        super().__init__(env, queueHandler, "TWF")
     
-    def tidalWaterFilling(self, job):
+    def dispatch(self, job):
         chosen = self.queueHandler.stochasticGetServer()
         chosen.submitJob(job)
 
-    # public getter to access the dispatching algorithm name
-    # used for saving results
-    def getOperationName(self):
-        if (self.op == 1):
-            return "Random"
-        elif (self.op == 2):
-            return "JSQ"
-        elif (self.op == 3):
-            return "JIQ"
-        elif (self.op == 4):
-            return "Softmin-JSQ"
-        elif (self.op == 5):
-            return "JSQ(2)"
-        elif (self.op == 6):
-            return "Softmin-JSQ(2)"
-        elif(self.op == 7):
-            return "TWF"
-        
-    
-    # continuously run the dispatcher for the entire simulation
-    # and dispatch jobs to the servers
-    def run(self, pause):
-        count = 0
-        while 1:
-            count += 1
-            # initialise a new job instance
-            job = Job(self.env)
-            # choose the dispatching operation
-            # 1 = Random, 2 = JSQ, 3 = JIQ, 4 = JSQd, 
-            # 5 = softminjsq, 6 = softminjsqd, 7 = tidalWaterFilling
-            if (self.op == 1):
-                self.dispatchRandom(job)
-            elif (self.op == 2):
-                self.JSQ(job)
-            elif (self.op == 3):
-                self.JIQ(job)
-            elif (self.op == 4):
-                self.softminjsq(job)
-            elif (self.op == 5):
-                self.JSQd(2, job)
-            elif (self.op == 6):
-                self.softminjsqd(2, job)
-            elif (self.op == 7):
-                self.tidalWaterFilling(job)
-            # pause for a random time given by m / n * l 
-            interval = np.random.exponential(pause)
-            yield self.env.timeout(interval)

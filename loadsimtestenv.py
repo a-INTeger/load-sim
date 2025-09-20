@@ -1,7 +1,8 @@
-import simpy, argparse
+import simpy, argparse, concurrent.futures
+from collections import defaultdict
 import numpy as np
 from server import Server
-from dispatcher import Dispatcher
+from dispatcher import *
 from queuehandler import QueueHandler
 import matplotlib.pyplot as plt
 
@@ -22,16 +23,20 @@ parser.add_argument("constant", help="Constant to change the fixed time delay by
 parser.add_argument("file", help="file name to save results data under (NOT PATH)")
 args = parser.parse_args()
 
+# get all subclasses of dispatcher (saves calling them per run)
+allDispatchers = [cls for cls in Dispatcher.__subclasses__()]
+
 # final dictionary to hold all result runtimes etc.
 finalResults = {}
 
-# run for 10 times to minimise the effect of randomisation
-for runNumber in range(10):
-    results = {}    # runtime results for current run
+
+def single_run(runNumber, args, allDispatchers):
+    results = {}
     LAMBDAS = np.linspace(0.0, 1.0, num=50)[1:] # range of lambda values to test
-    for op in range(1, 8): # test across all operations
-        # 1 = Random, 2 = JSQ, 3 = JIQ, 4 = JSQd, 5 = softminDistribute, 6 = softminDistributed, 7 = softminDistributedd
-        avgDelay = []
+
+    for cls in allDispatchers: # test across all operations
+        opName = cls(None, None).getOperationName()
+        results[opName] = {}
         for Lambda in LAMBDAS:
             # initialise the environment
             delaysArr = []
@@ -39,7 +44,7 @@ for runNumber in range(10):
             serverArr = [Server(env, str(i)) for i in range(args.servercount)]
             interval = args.dispatchercount / (args.servercount * Lambda)        
             queueHandler = QueueHandler(serverArr, env, args.constant , Lambda)
-            dispatcherArr = [Dispatcher(env, queueHandler, str(i), op) for i in range(args.dispatchercount)]
+            dispatcherArr = [cls(env, queueHandler) for i in range(args.dispatchercount)]
             # start the queuehandler
             env.process(queueHandler.getCurrentQueueStatus())
 
@@ -58,9 +63,33 @@ for runNumber in range(10):
             for server in serverArr:
                 delaysArr += server.getDelayArr()
 
-            avgDelay.append(np.mean(delaysArr))
-        results[dispatcherArr[0].getOperationName()] = avgDelay
-    finalResults[runNumber] = results
+            results[opName][Lambda] = delaysArr
 
-# save all results to the npy file
-np.save("c"+ str(args.constant) + "_" +'results_data_' + args.file + '.npy', finalResults)
+    return runNumber, results
+    
+
+def merge_results(finalResults, LAMBDAS):
+    mergedResults = defaultdict(lambda: defaultdict(list))
+    
+    for runNumber, results in finalResults.items():
+        for opName, lambdaDict in results.items():
+            for Lambda, delays in lambdaDict.items():
+                mergedResults[opName][Lambda].extend(delays)  # merge delay arrays
+    
+    # convert back to normal dict for saving
+    return {op: dict(lambdas) for op, lambdas in mergedResults.items()}
+
+# run for 10 times to minimise the effect of randomisation
+def main():
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = [executor.submit(single_run, runNumber, args, allDispatchers) for runNumber in range(10)]
+        for future in concurrent.futures.as_completed(futures):
+            runNumber, results = future.result()
+            finalResults[runNumber] = results
+
+    mergedResults = merge_results(finalResults, np.linspace(0.0, 1.0, num=50)[1:])
+
+if __name__ == "__main__":
+    main()
+    
+
